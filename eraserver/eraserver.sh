@@ -1,6 +1,8 @@
 #!/bin/sh
 
-[[ ! -z $ProductInstanceID ]] && [[ -f /etc/opt/eset/RemoteAdministrator/Server/config.cfg ]] && \
-	sed -i "s/^ProductInstanceID=.*/ProductInstanceID=$ProductInstanceID/g" /etc/opt/eset/RemoteAdministrator/Server/config.cfg
+if [ ! -z "$ProductInstanceID" ] && [ -f /etc/opt/eset/RemoteAdministrator/Server/config.cfg ]
+then
+  sed -i "s/^ProductInstanceID=.*/ProductInstanceID=$ProductInstanceID/g" /etc/opt/eset/RemoteAdministrator/Server/config.cfg
+fi
 
-service eraserver start
+/etc/init.d/eraserver start

@@ -1,6 +1,14 @@
 #!/bin/sh
 
-[[ -f /var/lib/tomcat7/webapps/era/WEB-INF/classes/sk/eset/era/g2webconsole/server/modules/config/EraWebServerConfig.properties ]] && sed -i 's/^server_address=.*/server_address=172.17.42.1/g' /var/lib/tomcat7/webapps/era/WEB-INF/classes/sk/eset/era/g2webconsole/server/modules/config/EraWebServerConfig.properties
+replace() {
+  while [ ! -f /usr/local/tomcat/webapps/era/WEB-INF/classes/sk/eset/era/g2webconsole/server/modules/config/EraWebServerConfig.properties ]
+  do
+    sleep 0.1
+  done
 
-service tomcat7 start
+  sed -i 's/^server_address=.*/server_address=eraserver/g' /usr/local/tomcat/webapps/era/WEB-INF/classes/sk/eset/era/g2webconsole/server/modules/config/EraWebServerConfig.properties
+}
 
+replace &
+
+catalina.sh run

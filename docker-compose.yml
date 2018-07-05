@@ -1,0 +1,50 @@
+version: '2'
+services:
+  eraconsole:
+    build: ./eraconsole
+    image: era/console
+    depends_on:
+      - eraserver
+    restart: always
+    mem_limit: 384M
+    ports:
+      - "8080:8080"
+    volumes:
+      - "/var/log/eset/RemoteAdministrator/Console:/var/log/eset/RemoteAdministrator/Console"
+      - "/etc/localtime:/etc/localtime"
+  eraserver:
+    build: 
+      context: ./eraserver
+      args:
+        DB_HOST: "mysql"
+        DB_PORT: 3306
+        DB_ADMIN_USER: "root"
+        DB_ADMIN_PASS: "3rsUksCqEuCX"
+        DB_USER: "era"
+        DB_PASS: "zHd4txRDAFcN"
+        DB_DATABASE: "era"
+        ERA_HOST_NAMES: "*"
+        ERA_ADMIN_PASS: "atamidisco"
+    image: era/server
+    restart: always
+    mem_limit: 128M
+    ports:
+      - "2222:2222"
+      - "2223:2223"
+      - "1237:1237/udp"
+    volumes:
+      - "/var/log/eset/RemoteAdministrator/Server:/var/log/eset/RemoteAdministrator/Server"
+      - "/etc/localtime:/etc/localtime"
+  mysql:
+    image: mysql:5.7
+    command: --max_allowed_packet=64M --innodb_log_file_size=256M --character-set-server=utf8
+    user: "1004:50"
+    mem_limit: 64M
+    environment:
+      MYSQL_ROOT_PASSWORD: "3rsUksCqEuCX"
+      MYSQL_USER: "era"
+      MYSQL_PASSWORD: "zHd4txRDAFcN"
+    volumes:
+      - ./mysql:/var/lib/mysql
+    ports:
+      - "3306:3306"
