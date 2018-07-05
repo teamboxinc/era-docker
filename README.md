@@ -1,77 +1,99 @@
-# Сервер ESET Remote Administrator
+# ESET Remote Administrator on Docker Compose
 
-### Сервер
+## イメージをビルドする
 
-```sh
-docker build -t eraserver --no-cache ./
+### コンポーネントの配置
 
-docker run -d \
-	--name eraserver \
-	--restart=always \
-	-p 2222:2222 \
-	-p 1237:1237/udp \
-	-p 2223:2223 \
-	-v /var/log/eset/RemoteAdministrator/Server:/var/log/eset/RemoteAdministrator/Server \
-	-v /etc/localtime:/etc/localtime:ro \
-	eraserver
-```
-
-Если база уже есть нужно найти идентификатор предыдущего инстанса (era_db.tbl_servers - server_uuid) и добавить в настройки сервера:
-
-[ -e ProductInstanceID=66666 ]
-
-При создании образа нужно задать пароль администратора сервера 
-```sh
-SERVER_ROOT_PASSWORD=11112222
-```
-
-##### Зависит:
-
-- Создать папку для логов - /var/log/eset/RemoteAdministrator/Server
+まず、ESET Remote Administratorのコンポーネントをダウンロードして、展開しておく。
+そして、サーバーとWebコンソールのファイルを、適当に配置する。
 
 ```sh
-DB_HOST=172.17.42.1 - если база на хост машине
+$ mv Component_Linux_x64/era.war eraconsole/
+$ ls eraconsole
+Dockerfile  era.war  tomcat.sh
+$ mv Component_Linux_x64/Server-Linux-x86_64.sh eraserver/
+$ ls eraserver
+Dockerfile  eraserver.sh  Server-Linux-x86_64.sh
 ```
 
-Могут понадобиться сертификаты - пока не включены
+### MySQL ODBCのダウンロード
 
+[ここ](https://dev.mysql.com/downloads/connector/odbc/5.3.html)からMySQL ODBCをダウンロードする。（バージョン5系統でないと動かないので注意。）
+そして、`eraserver`以下に配置する。
 
-### Веб консоль
-
-Копируем в папку с докер файлом:
 ```sh
-wget http://download.eset.com/download/ra/v6/standalone-installers/webconsole/era.war
-
-docker build -t eraconsole --no-cache ./
-
-docker run -d \
-	--name eraconsole \
-	--restart=always \
-	-p 127.0.0.1:8080:8080 \
-	-v /var/log/eset/RemoteAdministrator/Console:/var/log/eset/RemoteAdministrator/Console \
-	-v /etc/localtime:/etc/localtime:ro \
-	eraconsole
+$ ls eraserver/
+Dockerfile  eraserver.sh  mysql-connector-odbc-5.3.10-linux-ubuntu16.04-x86-64bit  Server-Linux-x86_64.sh
 ```
 
-##### Зависит:
+### MySQLの立ち上げ
 
-- Создать папку для логов - /var/log/eset/RemoteAdministrator/Console
-- Прописать адрес сервера после первого запуска:
+セットアップ中にMySQLへ接続するため、先にMySQLのインスタンスを立ち上げておく。あとで使うので、IPアドレスを確認しておく。
+
 ```sh
-export SERVER_ADDRESS=172.17.42.1
-
-[[ ! -z $SERVER_ADDRESS ]] && [[ -f /usr/local/tomcat/webapps/era/WEB-INF/classes/sk/eset/era/g2webconsole/server/modules/config/EraWebServerConfig.properties ]] && \
-	sed -i "s/^server_address=.*/server_address=$SERVER_ADDRESS/g" /usr/local/tomcat/webapps/era/WEB-INF/classes/sk/eset/era/g2webconsole/server/modules/config/EraWebServerConfig.properties
+$ docker-compose up -d mysql
+Starting eradocker_mysql_1
+$ docker inspect eradocker_mysql_1 | grep IPAddress
+                    "IPAddress": "172.20.0.2",
 ```
 
-### Зависимости
+一時的に、MySQLにアクセスできるように、`ufw`でファイアウォールを開けておく。
 
-- Настроить работу базы:
 ```sh
-my.cnf
-[mysqld]
-max_allowed_packet=33M
-
-log_bin_trust_function_creators = 1
-binlog_format = row
+# ufw allow 3306
 ```
+
+### イメージのビルド
+
+上で確認したIPアドレスに合わせて、`eraserver/Dockerfile`の以下のIPアドレスを適宜変更する。
+
+```
+RUN echo "172.17.0.1 mysql" >> /etc/hosts && \
+    /tmp/Server-Linux-x86_64.sh \
+        --skip-license \
+        --db-driver=MySQL \
+        --db-type="MySQL Server" \
+        --db-hostname=${DB_HOST} \
+        --db-port=${DB_PORT} \
+        --db-admin-username=${DB_ADMIN_USER} \
+        --db-admin-password=${DB_ADMIN_PASS} \
+        --db-user-username=${DB_USER} \
+        --db-user-password=${DB_PASS} \
+        --server-root-password=${ERA_ADMIN_PASS} \
+        --cert-hostname=${ERA_HOST_NAMES} \
+        --locale=ja-JP
+```
+
+あとは、ビルドが終わるのを待てば良い。
+
+```sh
+$ docker-compose build
+...
+$ docker-compose up -d
+```
+
+最後に、ファイアウォールをもとに戻しておく。
+
+```sh
+$ sudo ufw delete allow 3306
+```
+
+## デプロイ
+
+- `ufw`で使うポートのファイアウォールを開ける
+- `apache`か`nginx`などのリバースプロキシで、コンソールにアクセスできるようにする
+
+## メモ
+
+- イメージのビルド中は、専用のネットワークが用いられるため、他のイメージを参照できない
+  - `network_mode: host`なども使えない
+    - IPで指定すればホストにアクセス可能だが、ファイアウォールを開けておく必要がある
+- `/etc/hosts`がDockerに管理されているために、変更できない
+  - 永続的に変更するには、`docker-compose.yaml`に`extra_hosts`を追加する
+    - ビルド時だけ参照するには、RUNの中では変更が保持されるので、`echo "..." > /etc/hosts && ...`が使える
+- ESET Remote Administratorのインストーラが`/bin/systemctl`を叩くとエラーが発生する
+  - https://forum.eset.com/topic/14670-installation-issue-failed-to-connect-to-bus/
+- コンソールは`localhost`にサーバーがある前提でコネクションを行う
+  - `eraconsole/tomcat.sh`にあるように、`WEB-INF`以下の`EraWebServerConfig.properties`を無理やり書き換えればよい
+- 過去に使用していたデータベースからのマイグレーションであれば、`ProductInstanceID`という環境変数を指定すればよいらしい
+  - 詳しくは`eraserver/eraserver.sh`をベースに調査が必要
