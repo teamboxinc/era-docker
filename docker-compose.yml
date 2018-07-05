@@ -39,7 +39,7 @@ services:
     image: mysql:5.7
     command: --max_allowed_packet=64M --innodb_log_file_size=256M --character-set-server=utf8
     user: "1004:50"
-    mem_limit: 64M
+    mem_limit: 128M
     environment:
       MYSQL_ROOT_PASSWORD: "3rsUksCqEuCX"
       MYSQL_USER: "era"
