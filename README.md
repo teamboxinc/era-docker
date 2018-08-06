@@ -28,15 +28,7 @@ Dockerfile  eraserver.sh  mysql-connector-odbc-5.3.10-linux-ubuntu16.04-x86-64bi
 
 ### MySQLの立ち上げ
 
-セットアップ中にMySQLへ接続するため、先にMySQLのインスタンスを立ち上げておく。あとで使うので、IPアドレスを確認しておく。
-
-```sh
-$ docker-compose up -d mysql
-Starting eradocker_mysql_1
-$ docker inspect eradocker_mysql_1 | grep IPAddress
-                    "IPAddress": "172.20.0.2",
-```
-
+セットアップ中にMySQLへ接続するため、先にMySQLのインスタンスを立ち上げておく。
 一時的に、MySQLにアクセスできるように、`ufw`でファイアウォールを開けておく。
 
 ```sh
@@ -45,7 +37,7 @@ $ docker inspect eradocker_mysql_1 | grep IPAddress
 
 ### イメージのビルド
 
-上で確認したIPアドレスに合わせて、`eraserver/Dockerfile`の以下のIPアドレスを適宜変更する。
+ホストのIPアドレスに合わせて、`eraserver/Dockerfile`の以下のIPアドレスを適宜変更する。
 
 ```
 RUN echo "172.17.0.1 mysql" >> /etc/hosts && \

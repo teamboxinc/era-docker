@@ -6,9 +6,9 @@ services:
     depends_on:
       - eraserver
     restart: always
-    mem_limit: 384M
+    mem_limit: 196M
     ports:
-      - "8080:8080"
+      - "8009:8009"
     volumes:
       - "/var/log/eset/RemoteAdministrator/Console:/var/log/eset/RemoteAdministrator/Console"
       - "/etc/localtime:/etc/localtime"
@@ -26,8 +26,10 @@ services:
         ERA_HOST_NAMES: "*"
         ERA_ADMIN_PASS: "atamidisco"
     image: era/server
+    depends_on:
+      - mysql
     restart: always
-    mem_limit: 128M
+    mem_limit: 96M
     ports:
       - "2222:2222"
       - "2223:2223"
@@ -39,7 +41,7 @@ services:
     image: mysql:5.7
     command: --max_allowed_packet=64M --innodb_log_file_size=256M --character-set-server=utf8
     user: "1004:50"
-    mem_limit: 128M
+    mem_limit: 96M
     environment:
       MYSQL_ROOT_PASSWORD: "3rsUksCqEuCX"
       MYSQL_USER: "era"

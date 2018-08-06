@@ -45,8 +45,8 @@ RUN echo "172.17.0.1 mysql" >> /etc/hosts && \
 	--cert-hostname=${ERA_HOST_NAMES} \
 	--locale=ja-JP
 
-RUN find /opt/eset/RemoteAdministrator/Server
-
 RUN mv /bin/systemctl.back /bin/systemctl
+
+RUN rm /tmp/Server-Linux-x86_64.sh
 
 CMD ["/opt/eset/RemoteAdministrator/Server/ERAServer"]
